@@ -1,0 +1,185 @@
+
+%%%%%%%%%%%%%%%%%%%%%%% file typeinst.tex %%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% This is the LaTeX source for the instructions to authors using
+% the LaTeX document class 'llncs.cls' for contributions to
+% the Lecture Notes in Computer Sciences series.
+% http://www.springer.com/lncs       Springer Heidelberg 2006/05/04
+%
+% It may be used as a template for your own input - copy it
+% to a new file with a new name and use it as the basis
+% for your article.
+%
+% NB: the document class 'llncs' has its own and detailed documentation, see
+% ftp://ftp.springer.de/data/pubftp/pub/tex/latex/llncs/latex2e/llncsdoc.pdf
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\documentclass[runningheads,a4paper]{llncs}
+\usepackage{CJK}
+\usepackage{amssymb}
+\setcounter{tocdepth}{3}
+\usepackage{graphicx}
+
+\usepackage{multirow}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+
+%% start: insert by jacoxu
+\def\sharedaffiliation{%
+\end{tabular}
+\begin{tabular}{c}}
+%%
+\makeatletter
+\def\hlinewd#1{%
+  \noalign{\ifnum0=`}\fi\hrule \@height #1 \futurelet
+   \reserved@a\@xhline}
+\makeatother
+
+\floatname{algorithm}{算法}
+%\newcounter{algorithm1}[chapter]
+%\setcounter{algorithm1}{0}
+\renewcommand{\thealgorithm}{\arabic{chapter}.\arabic{algorithm}}
+\usepackage{setspace}
+%% end: insert by jacoxu
+
+\usepackage{url}
+\urldef{\mailsa}\path|{jiaming.xu, suncong.zheng, boxu, guanhua.tian}@ia.ac.cn|
+\newcommand{\keywords}[1]{\par\addvspace\baselineskip
+\noindent\keywordname\enspace\ignorespaces#1}
+
+\begin{document}
+\begin{CJK*}{GBK}{song}
+\mainmatter  % start of an individual contribution
+
+% first the title is needed
+\title{基于半监督学习的实体类型预测方法说明}
+
+% a short form should be given in case it is too long for the running head
+\titlerunning{基于半监督学习的实体类型预测方法说明}
+
+% the name(s) of the author(s) follow(s) next
+%
+% NB: Chinese authors should write their first names(s) in front of
+% their surnames. This ensures that the names appear correctly in
+% the running heads and the author index.
+%
+\author{许家铭, 郑孙聪, 徐博, 田冠华}
+%
+\authorrunning{基于半监督学习的实体类型预测方法说明}
+% (feature abused for this document to repeat the title also on left hand pages)
+
+% the affiliations are given next; don't give your e-mail address
+% unless you accept that it will be published
+\institute{中国科学院自动化研究所. 100190, 北京, 中国\\
+\mailsa
+}
+
+%
+% NB: a more complex sample for affiliations and the mapping to the
+% corresponding authors can be found in the file "llncs.dem"
+% (search for the string "\mainmatter" where a contribution starts).
+% "llncs.dem" accompanies the document class "llncs.cls".
+%
+
+\toctitle{Lecture Notes in Computer Science}
+\tocauthor{Authors' Instructions}
+\maketitle
+
+
+\begin{abstract}
+本说明文档介绍了一种基于半监督学习的实体类型预测方法，数据由~JIST2015~评测提供。本方法首先将实体词所链接的非结构摘要文本和结构化属性文本信息统一以向量空间模型进行向量化表示，并基于此训练线性支持向量机模型对多个实体类别进行打分。然后通过制定较为简单的规则对类别得分进行修正，并基于此得分设定阈值将未标注数据中置信度较高的样本加入到已标注数据中进行模型再学习。最终得到的实体类型预测模型具有如下几个优点：(1). 未使用任何外部语料数据; (2). 制定规则非常简单; (3). 模型训练速度很快。最终在训练集的交叉验证评价指标精度值为~98.2，F1~值为~9.82。
+
+\keywords{实体类型预测，半监督学习，支持向量机，JIST2015}
+\end{abstract}
+
+
+\section{数据说明}
+
+JIST2015~评测共发布~1,897~条~URLs，其中有已标注数据~1,397~条，未标注数据~500~条，实体类型共有~10~种，如：虫~(insect)、大学~(university)、游戏~(game)、政治家~(politician)、城市~(city)~等。表~\ref{tb:Tab_1_1_URLDescription}~展示的是其中一条已标注数据，而未标注数据则只有~URL~信息。
+
+\begin{table}[ht]
+\begin{center}
+\begin{tabular}{cc}\hlinewd{1.2pt}
+  ~~~~{\bf{URL}}~~~~ &     ~~~~{\bf{标签}}~~~~      \\\hline
+http://zhishi.me/baidubaike/resource/\%FF\%FE\%F3\%67\%DE\%5D   &   city \\\hlinewd{1.2pt}
+\end{tabular}
+\end{center}
+\caption{\label{tb:Tab_1_1_URLDescription}已标注样本示例}
+\end{table}
+
+为了进行实体类型预测，数据中每条~URL~样本至多可获得四种信息，分别为：非结构化摘要~(Abstracts)~信息、结构化属性信息框~(Infobox data)、外部链接网址~(External URLs)~ 以及相关内容链接~(Related URLs)。如表~\ref{tb:Tab_1_2_DataDescription}~所示，非结构化摘要信息以文本形式必然存在，而属性信息框则是结构化的词特征且不一定为每一个实体词所有。另外，官方数据提供的外部链接网址和相关内容链接只提供了网址，而相关文本信息则需要用户自己基于此网址进行爬取，且此网址并非每个实体词的必有项。
+
+\begin{table}[ht]
+\begin{center}
+\begin{tabular}{cccc}\hlinewd{1.2pt}
+  {\bf{三元组结构文件存储}} &    {\bf{含义}} &     {\bf{形式}}  & {\bf{是否必有}}   \\\hline
+./zhishime\_abstracts\_zh\_enc.nt   &   Abstracts &     文本&     是\\
+./zhishime\_infobox\_properties\_zh\_enc.nt & Infobox data&     属性词&     否\\
+./zhishime\_external\_links\_zh\_enc.nt & External URLs&     网址&     否\\
+./zhishime\_related\_pages\_zh\_enc.nt & Related URLs&     网址&     否\\\hlinewd{1.2pt}
+\end{tabular}
+\end{center}
+\caption{\label{tb:Tab_1_2_DataDescription}所提供的四种特征信息}
+\end{table}
+
+\section{文本特征抽取}
+本小节以标注数据中的如下~URL~做为示例介绍文本特征抽取过程：
+
+“http://zhishi.me/baidubaike/resource/\%FF\%FE\%4E\%53\%0F\%59\%61\%21”
+
+其标注的实体类型为~game~(游戏)。
+
+\subsection{文本特征预处理}
+本方法对所有文本信息进行预处理，其过程如下：(1). 英文字母全部小写；(2). 过滤掉所有字符；(3). 中文分词；(4). 停用词过滤。
+
+\subsection{非结构化摘要文本特征}
+上述示例URL所对应的摘要信息如下：
+
+“《华夏Ⅱ》是一款由深圳网域公司开发的3D网络游戏。该游戏以神、人、魔、幽冥四界之间的纷争和有情世间的恩怨情仇为主线，再现了《山海经》、《淮南子》等古书中记载的传奇故事，充分体验到华夏民族的创造力和想象力。”
+
+可以看出摘要首句包含着重要的实体类型信息，因而在保留摘要全部文本特征的情况下，额外抽取其首句并进行分词处理。为了保证首句信息的完全保留，本方法文本预处理在进行正常中文分词的情况下，同时对首句进行~1-gram分词。如以下所示：
+
+正常分词：“华夏 款 深圳 网 域 公司 开发 d 网络 游戏 游戏”；
+
+1-gram分词：“华 夏 款 深 圳 网 域 公 司 开 发 网 络 游 戏”；
+
+\subsection{结构化属性词特征}
+上述示例URL所对应的属性词特征如下表~\ref{tb:Tab_1_3_URLInfoBox}~所示：
+
+\begin{table}[ht]
+\begin{center}
+\begin{tabular}{ccccccc}\hlinewd{1.2pt}
+  {\bf{属性类型}} & 游戏画面 & 游戏特征& 中文名& 游戏类型& 游戏平台& 开发商     \\\hline
+{\bf{属性值}}   & 3D& 奇幻游戏& 华夏Ⅱ&角色扮演& 网络游戏& 深圳网域  \\\hlinewd{1.2pt}
+\end{tabular}
+\end{center}
+\caption{\label{tb:Tab_1_3_URLInfoBox}示例~URL~所对应的属性集合}
+\end{table}
+
+可以看出，属性词特征中也具有重要的实体类型信息。考虑到属性类型繁多、较不规范，本方法直接将~URL~所包含的属性类型和属性值直接做为词特征进行统计模型训练。
+
+\subsection{特征集合}
+基于以上文本特征提取过程，可得到如表~\ref{tb:Tab_1_4_FeatureSet}~中所述的几种文本特征。在实验部分对这几种特征进行组合对比。
+\begin{table}[ht]
+\begin{center}
+\begin{tabular}{cccc}\hlinewd{1.2pt}
+  {\bf{特征}} &   {\bf{描述}} & {\bf{特征}} &   {\bf{描述}}    \\\hline
+L1  & 摘要文本信息 & L2 & 摘要文本信息+属性词特征  \\
+L3 & 摘要文本首句（中文分词） & L4 & 摘要文本首句（1-gram分词）\\\hlinewd{1.2pt}
+\end{tabular}
+\end{center}
+\caption{\label{tb:Tab_1_4_FeatureSet}本方法所使用的文本特征}
+\end{table}
+
+\section{制定规则模版}
+如上章节示例的非结构化摘要文本信息分析，首句文本中包含了实体类型的重要信息，而且存在“[实体词]是[类型关键词]”的子句式结构。由于仅根据URL无法准确识别实体词，因而本方法中所用的唯一规则模版仅利用“是[类型关键词]”的子句式结构进行模版匹配，并定义规则函数 如下：
+规则1：对于某一实体x，判断其对应摘要文本信息首句中的前k个子句中是否包含所属词“是”，同时其后存在“类型关键词”，且该“类型关键词”距离该子句末尾的字距离小于l，则认为模版匹配，即 ，否则 。
+基于此规则并生成向量化特征 ，每个元素值为：
+
+
+
+
+\end{CJK*}
+\end{document}
