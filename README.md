@@ -18,3 +18,5 @@ Please feel free to send me emails (*jacoxu@msn.com*) if you have any problems.
 /result.dat: Our result by our solution.    
 /TASK DESCRIPTION.pdf: TASK DESCRIPTION.    
 /testgold.dat: The true test label provied by challenge committee.
+
+<img src="http://wx3.sinaimg.cn/mw690/697b070fly1fee8etsu9ij20i50cttb9.jpg" width="500">
